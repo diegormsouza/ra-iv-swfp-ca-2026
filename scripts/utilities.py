@@ -11,7 +11,7 @@ from botocore import UNSIGNED            # boto3 config
 from botocore.config import Config       # boto3 config
 import math                              # Mathematical functions
 import time as t                         # Time access and conversions
-from datetime import datetime            # Basic Dates and time types
+from datetime import datetime, timedelta # Basic Dates and time types
 from osgeo import osr                    # Python bindings for GDAL
 from osgeo import gdal                   # Python bindings for GDAL
 import warnings
@@ -736,3 +736,4 @@ def remap(path, variable, extent, resolution):
     return grid
 #---------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------
+
