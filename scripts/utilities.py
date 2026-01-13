@@ -293,6 +293,63 @@ def download_GOES(timestamp, satellite, product, band, path_dest, scan_params=No
     else:
         return downloaded_files
 
+########################################################################################################################
+# download_mimic_tpw: Descarga archivo MIMIC TPW v2 NetCDF desde CIMSS
+# URL base: https://bin.ssec.wisc.edu/pub/mtpw2/data/
+# Formato: compYYYYMMDD.HHMM00.nc
+# Autor: Adaptado de Diego Souza (INPE/CGCT/DISSM)
+########################################################################################################################
+def download_mimic_tpw(date_str, output_dir='./samples'):
+    """
+    Descarga el archivo MIMIC TPW v2 para una fecha/hora específica.
+    
+    Parámetros:
+        date_str (str): Fecha y hora en formato 'YYYY-MM-DD HH:MM' o 'YYYY-MM-DD HH:MM:SS'
+        output_dir (str): Directorio donde guardar el archivo (default: './samples')
+    
+    Retorna:
+        str: Ruta completa del archivo descargado
+    """
+    import os
+    import requests
+    from datetime import datetime
+    
+    # Normalizamos la fecha/hora
+    dt = datetime.strptime(date_str, '%Y-%m-%d %H:%M')  # si incluye segundos, ajusta el formato
+    year = dt.strftime('%Y')
+    month = dt.strftime('%m')
+    day = dt.strftime('%d')
+    hour = dt.strftime('%H')
+    minute = dt.strftime('%M')
+    
+    # Construimos el nombre del archivo
+    file_name = f'comp{year}{month}{day}.{hour}{minute}00.nc'
+    
+    # URL completa
+    url = f'https://bin.ssec.wisc.edu/pub/mtpw2/data/{year}{month}/{file_name}'
+    
+    # Directorio de salida
+    os.makedirs(output_dir, exist_ok=True)
+    local_path = os.path.join(output_dir, file_name)
+    
+    print(f"Descargando MIMIC TPW v2 desde CIMSS: {file_name}")
+    print(f"URL: {url}")
+    
+    # Descarga
+    try:
+        r = requests.get(url, allow_redirects=True, timeout=30)
+        r.raise_for_status()  # Lanza error si falla
+        
+        with open(local_path, 'wb') as f:
+            f.write(r.content)
+        
+        print(f"Descarga exitosa: {local_path}")
+        return local_path
+    
+    except Exception as e:
+        print(f"Error al descargar {file_name}: {str(e)}")
+        return None
+		
 def loadCPT(path):
 
     try:
@@ -736,4 +793,5 @@ def remap(path, variable, extent, resolution):
     return grid
 #---------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------
+
 
