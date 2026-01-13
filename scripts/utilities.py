@@ -15,6 +15,9 @@ from datetime import datetime, timedelta # Basic Dates and time types
 from osgeo import osr                    # Python bindings for GDAL
 from osgeo import gdal                   # Python bindings for GDAL
 import warnings
+import requests
+import xml.etree.ElementTree as ET
+
 warnings.filterwarnings("ignore")
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
@@ -349,7 +352,85 @@ def download_mimic_tpw(date_str, output_dir='./samples'):
     except Exception as e:
         print(f"Error al descargar {file_name}: {str(e)}")
         return None
-		
+
+def download_alpw(datetime_str: str, output_dir="./samples", verbose=True):
+    """
+    Download the BHP-ALPW file whose filename contains the END TIME eYYYYMMDDHH
+    using the official S3 XML listing (ListObjectsV2).
+    """
+
+    # ── Parse datetime ───────────────────────────────────────────────────────
+    try:
+        target = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M")
+        if target.minute != 0:
+            raise ValueError("The time must end in :00")
+    except Exception as e:
+        raise ValueError(f"Expected format: YYYY-MM-DD HH:00 → {e}")
+
+    year  = target.strftime("%Y")
+    month = target.strftime("%m")
+    day   = target.strftime("%d")
+    hour  = target.strftime("%H")
+
+    end_token = f"e{year}{month}{day}{hour}"
+
+    prefix = f"JPSS_Blended_Products/BHP_ALPW/{year}/{month}/{day}/"
+
+    list_url = (
+        "https://noaa-jpss.s3.amazonaws.com/"
+        f"?list-type=2&prefix={prefix}"
+    )
+
+    if verbose:
+        print("Searching for files in:")
+        print(prefix)
+
+    # ── List S3 objects ──────────────────────────────────────────────────────
+    r = requests.get(list_url, timeout=30)
+    r.raise_for_status()
+
+    root = ET.fromstring(r.content)
+
+    namespace = {"s3": "http://s3.amazonaws.com/doc/2006-03-01/"}
+
+    filename = None
+    for key in root.findall(".//s3:Key", namespace):
+        name = key.text
+        if name.endswith(".nc") and end_token in name:
+            filename = os.path.basename(name)
+            break
+
+    if filename is None:
+        raise FileNotFoundError(
+            f"No file found with END TIME {end_token}\n"
+            f"Prefix: {prefix}"
+        )
+
+    file_url = "https://noaa-jpss.s3.amazonaws.com/" + prefix + filename
+
+    if verbose:
+        print("\nFile found:")
+        print(filename)
+        print(f"URL: {file_url}")
+
+    # ── Download ─────────────────────────────────────────────────────────────
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, filename)
+
+    with requests.get(file_url, stream=True, timeout=90) as r:
+        r.raise_for_status()
+        with open(output_path, "wb") as f:
+            for chunk in r.iter_content(chunk_size=65536):
+                if chunk:
+                    f.write(chunk)
+
+    if verbose:
+        print("\n✓ Download completed")
+        print(f"File saved at: {output_path}")
+        print(f"File size: {os.path.getsize(output_path):,} bytes")
+
+    return output_path
+	
 def loadCPT(path):
 
     try:
@@ -793,5 +874,6 @@ def remap(path, variable, extent, resolution):
     return grid
 #---------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------
+
 
 
