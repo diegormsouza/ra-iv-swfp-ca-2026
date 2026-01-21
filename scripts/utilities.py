@@ -306,7 +306,7 @@ def download_GOES(timestamp, satellite, product, band, path_dest,
         return None
 
     if not is_latest and used_mode != mode and possible_modes != ['']:
-        print(f"Note: Used mode M{used_mode} instead of default M{mode} for better match.")
+        #print(f"Note: Used mode M{used_mode} instead of default M{mode} for better match.")
 
     # ────────────────────────────────────────────────────────────────
     # Download
@@ -914,6 +914,7 @@ def remap(path, variable, extent, resolution):
     return grid
 #---------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------
+
 
 
 
